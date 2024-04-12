@@ -1,0 +1,239 @@
+Skip to main content
+Skip to editor
+Skip to results
+Site
+Worksheets
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+select * from US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_LENEL_S2_EVENTS_180_DAYS where person_id = '3463683' and date(timestamp_local) >= '2024-03-01' and portal_name like '%Lane%' order by timestamp_local desc 
+
+select max(created_at) from US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_ADP_ATTENDANCE_BREAKDOWN order by created_at desc 
+
+with A as (select distinct(Employee_id),
+contingent_worker_type,
+Hire_date, 
+Termination_date, 
+datediff(day,hire_date,termination_date)as "Hire_minus_Termination_date",
+CREATED_AT
+
+FROM US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK_PI), --LAYER_ANALYTICS.VIEW_OA_WD_KITCHEN_SINK VIEW_OA_WD_KITCHEN_S)
+
+B as (select distinct(Employee_id),
+contingent_worker_type,
+Hire_date, 
+Termination_date, 
+datediff(day,hire_date,termination_date)as "Hire_minus_Termination_date", 
+CREATED_AT,
+ran_at,
+raw_file_date
+
+FROM US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK_PI), -- LAYER_ANALYTICS.VIEW_OA_WD_KITCHEN_SINK VIEW_OA_WD_KITCHEN_S 
+
+C as (Select distinct a.employee_id, a.hire_date, a.termination_date, datediff(day,a.Hire_date, a.Termination_date) as "Hire_minus_Termination_date",a.CREATED_AT
+      from A inner join B on a.employee_id = b.employee_id
+        where a.hire_date <> b.hire_date 
+        and a.contingent_worker_type is null
+        HAVING abs(datediff(day,a.hire_date,a.termination_date)) < 7
+     order by a.Employee_id, a.hire_date)
+
+Select * from c
+
+select * from US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_ADP_TIMECARD_UNIQUE_ALL
+where TIMECARD_PAY_DATE = '2023-07-10'
+
+SELECT *,case 
+    when status = 'Terminated' then datediff(day,hire_date,termination_date) 
+    --when termination_date<hire_date then datediff(day,hire_date,raw_file_date)
+    else datediff(day,hire_date,raw_file_date) end as Tenure
+from US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK
+where 
+raw_file_date IN (
+    SELECT   MAX(raw_file_date)
+    FROM     US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK
+    GROUP BY MONTH(raw_file_date), YEAR(raw_file_date)
+  )
+  order by raw_file_date desc
+
+
+ SELECT   distinct(raw_file_date), count(distinct(EMPLOYEE_ID))
+    FROM     US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK
+    --where month(raw_file_date)=7
+    group by raw_file_date
+    order by raw_file_date desc
+Entire tableMAX(CREATED_AT)
+Result row 12024-03-27 16:36:29.912
+Result row 2
+Query Details
+Query duration
+6.2s
+Rows
+1
+Query ID
+01b34ab9-0303-935e-0000-27758b24fd72
+MAX(CREATED_AT)
+100% filled
+Databases
+Worksheets
+Search objects
+Pinned (0)
+No pinned objects
+
+Sorted by descending
+View Definition
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+create or replace view US_PEOPLE_INSIGHTS.DOMO.DAILY_ROSTER_DOMO_FINAL(
+	PAYROLL_COMPANY_CODE,
+	ASSOCIATE_ID,
+	POSITION_ID,
+	BADGE,
+	HIRE_DATE,
+	HIRE_SOURCE_DESCRIPTION,
+	HOME_DEPARTMENT_DESCRIPTION,
+	LOCATION_DESCRIPTION,
+	ASSIGNED_SHIFT_CODE,
+	ASSIGNED_SHIFT_DESCRIPTION,
+	POSITION_STATUS,
+	REPORTS_TO_NAME,
+	STATUS,
+	WORKER_TYPE,
+	IS_LEAD,
+	MOST_RECENT_DAY_WORKED,
+	ROSTER_DATE,
+	TIMEZONE,
+	NOTES,
+	COVID_LEAVE,
+	SUGGESTED_ROSTER_BUCKET,
+	"UPDATED_ROSTER_BUCKET_(IF_CHANGED_NEEDED)",
+	TIMEZONE_GROUP,
+	FINAL_ROSTER_BUCKET,
+	UPLOAD_DATETIME,
+	UPLOAD_DATE,
+	HOME_DEPARTMENT_CODE,
+	SCHEDULE,
+	LEAD_SIGNOFF,
+	PUBLISH_STATUS,
+	BREAK_IN_SERVICE,
+	BRAND,
+	PRESHIFT_VER,
+	UPLOAD_RANK
+) as  with A as (Select * FROM "US_PEOPLE_INSIGHTS"."DOMO"."DAILY_ROSTER_DOMO_TIMEZONES"), 
+B as (select* from "US_PEOPLE_INSIGHTS"."DOMO"."DAILY_ROSTER_DOMO_BACKDATE"), -- LAYER_ANALYTICS.VIEW_OA_WD_KITCHEN_SINK VIEW_OA_WD_KITCHEN_S
+C as (select * from "US_PEOPLE_INSIGHTS"."DOMO"."ROSTER_HISTORICAL" ),
+D as (SELECT * from A UNION SELECT * FROM b union Select * from C  order by ASSOCIATE_ID,ROSTER_DATE,UPLOAD_DATETIME)
+ SELECT * FROM (
+	SELECT
+   
+	*,
+		RANK () OVER (
+			PARTITION BY associate_id, roster_date
+			ORDER BY upload_datetime DESC
+		) Upload_Rank
+	FROM
+		D
+) t
+WHERE Upload_Rank = 1 
+ORDER BY ASSOCIATE_ID, ROSTER_DATE, UPLOAD_DATETIME DESC;
