@@ -1,0 +1,317 @@
+
+//Trigger information: Triggers should be set to run the hour after each shift ends, *in that local time*. For example, Grand Prairie's shifts end at 5:30 a.m. and 5:30 p.m. CST. Therefore, its triggers should be set to run at 7 a.m. and 7 p.m. EST.
+
+function ClearMainSheet() {
+
+var s1 = SpreadsheetApp.getActiveSpreadsheet();
+var ss = s1.getSheetByName('VER storage');
+var Entry = s1.getSheetByName('VER Entry Tab')
+var rangeA = ss.getRange('A2:A');
+var rangeB = ss.getRange('B2:B');
+var rangeC = ss.getRange('C2:C');
+var rangeD = ss.getRange('D2:D');
+var rangeE = ss.getRange('E2:E');
+var rangeG = ss.getRange('G2:G');
+var rangeT = Entry.getRange('T2:T');
+var rangeU = Entry.getRange('U2:U');
+var rangeH = ss.getRange('H2:H');
+//var rangeI = ss.getRange('I2:I');
+var rangeN = ss.getRange('n2:n');
+var rangeEnd  = ss.getRange('Q2:U');
+var rangeW = ss.getRange('W2:W');
+var rangeWentry = Entry.getRange('W2:W')
+var rangeQentry = Entry.getRange('q2:q')
+var lastRow = ss.getLastRow();
+var Writeback = s1.getSheetByName('Writeback');
+var Overdue = s1.getSheetByName('Overdue Requests');
+var OverdueRange = Overdue.getRange('A:Z')
+var OverdueCondition = Overdue.getRange('Q:Q')
+var sourceRange = Writeback.getDataRange();
+var sourceFormat = ss.getDataRange();
+
+// clear open-source columns from Entry Tab, then clear the entire Overdue sheet
+
+rangeA.clearContent();
+rangeB.clearContent();
+rangeEnd.clearContent();
+rangeD.clearContent();
+rangeC.clearContent();
+rangeE.clearContent();
+rangeG.clearContent();
+rangeH.clearContent();
+rangeT.clearContent();
+rangeU.clearContent();
+//rangeI.clearContent();
+rangeN.clearContent();
+rangeW.clearContent();
+rangeWentry.clearContent();
+rangeQentry.clearContent();
+OverdueRange.clearContent();
+
+// reset the checkmarks and data validation for FSS Actioned? on Entry Tab
+var column = Entry.getRange("q2:q" + lastRow);
+var columnW = Entry.getRange('w2:w' + lastRow); 
+
+  var validateCheckBox = SpreadsheetApp.newDataValidation();
+  validateCheckBox.requireCheckbox();
+  validateCheckBox.setAllowInvalid(false);
+  validateCheckBox.build();
+
+  column.setDataValidation(validateCheckBox)
+  columnW.setDataValidation(validateCheckBox);
+  
+
+// Copy the Writeback information over to the Overdue Requests tab, then set the formatting to match Entry Tab
+sourceRange.copyTo(Overdue.getRange(1,1), SpreadsheetApp.CopyPasteType.PASTE_VALUES, false);
+sourceFormat.copyTo(Overdue.getRange(1,1), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+
+// reset the checkmarks and data validation for FSS Actioned? on Overdue Requests
+var column = Overdue.getRange("q2:q" + lastRow);
+var columnW = Overdue.getRange('w2:w' + lastRow);
+
+  var validateCheckBox = SpreadsheetApp.newDataValidation();
+  validateCheckBox.requireCheckbox();
+  validateCheckBox.setAllowInvalid(false);
+  validateCheckBox.build();
+
+ column.setDataValidation(validateCheckBox);
+ columnW.setDataValidation(validateCheckBox);}
+
+
+
+  
+
+  function LoadVERData() {
+      var s1 = SpreadsheetApp.getActiveSpreadsheet();
+      var ss = s1.getSheetByName('VER Inputs');
+      let ss2 = SpreadsheetApp.getActiveSpreadsheet();
+      let source = ss2.getSheetByName("slacksend");
+      let rangeIDs = ss.getRange('B2:b').getValues();
+      let rangeIDsReceipt = ss.getRange('B1:b').getValues();
+      let rangeIDsrange = ss.getRange('B2:B') //needed for clearing out data
+      var Entry = s1.getSheetByName('VER Storage');
+      var Receipt = s1.getSheetByName('Receipt');
+      var Inputs = s1.getSheetByName('VER Inputs')
+      var InputRange = Inputs.getRange('B:B');
+      let rangefilteredData = rangeIDs.filter(row => !row.every(cell => cell == ""));
+      let rangefilterReceipt = rangeIDsReceipt.filter(row => !row.every(cell => cell == ""));
+      var NewRangeIDs = Entry.getRange('B1:B');
+      var IDvalues = NewRangeIDs.getValues();
+      let Dropdown = s1.getSheetByName("Dropdowns");
+      let DDVER = Dropdown.getRange("D2").getValue();
+      let DDVERformat = Utilities.formatDate(DDVER,"GMT","MM/dd/yyyy") ;
+      const now = new Date(); // today's date for user, needed to update timezone
+      var currentTime = now.toLocaleTimeString();
+      var OneEmail = Session.getEffectiveUser().getEmail();
+      var Emails = source.getRange('B2').setValue(OneEmail);
+      var ReceiptID = Receipt.getSheetId();
+      var numbercheck = source.getRange('A4').getValue();
+      let UTCdiff = source.getRange("f2").getValue()  // UTC hours behind;
+      const MILLIS_PER_hour = 1000 * 60 * 60 ; //used to subtract time
+      const UTCadjusted = new Date(now.getTime()- (UTCdiff *  MILLIS_PER_hour));
+      let adjtime = Utilities.formatDate(UTCadjusted,UTCadjusted, "h"); // todays date/time, in Central time, return hour number
+      let deadtime1 = source.getRange("k8").getDisplayValue();
+      let deadtime2 = source.getRange("L8").getDisplayValue();
+      let left1 = deadtime1.indexOf(":");
+      let left2 = deadtime2.indexOf(":");
+      let deadhour1 = deadtime1.substring(0,left1);
+      let deadhour2 = deadtime2.substring(0,left2); 
+      Logger.log("Madi's request");
+      var lastRow = Entry.getLastRow();
+      var numcount = ss.getRange("b:b").getValues().filter(String).length
+      
+      
+
+//block script during dead hours
+if(adjtime == deadhour1 || adjtime == deadhour2) {
+    console.log("Dead Hour");
+    console.log(adjtime);
+    console.log(deadhour1);
+    Browser.msgBox("DOMO Import in Progress: Please wait until top of the hour for submission");}
+      else {
+ 
+ 
+// Need to confirm that all ID submissions are actual numbers -- if not, we make them re-submit
+if( numbercheck == false) {
+      Browser.msgBox("Please double-check that all submissions real ID numbers and try submitting again")
+    }
+  else {
+
+
+    //Paste the submitted data over to the Receipt tab
+    Receipt.getRange(1,1,rangefilterReceipt.length,rangefilterReceipt[0].length).setValues(rangefilterReceipt);
+    Receipt.getRange(2,2,numcount -1 ,1).setValue(OneEmail);
+    Receipt.getRange(1,2).setValue("Individual");
+    Receipt.getRange(2,3,numcount -1 ,1).setValue(DDVERformat);
+    Receipt.getRange(1,3).setValue("VER Date");
+   
+
+}
+
+    // whatever u want to happen if its not empty
+    Logger.log("This one not empty")
+    
+    // Now we're going to set up the email attachment
+    var address = Emails.getValue()
+ 
+    // Export the Receipt sheet as an Excel file
+    var url = 'https://docs.google.com/feeds/download/spreadsheets/Export?key=' + s1.getId() + '&exportFormat=xlsx&gid=' + ReceiptID;
+    var params = {
+      method: 'get',
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true,
+    };
+    var blob = UrlFetchApp.fetch(url, params).getBlob();
+    var sheetName = ss.getName();
+    var d = new Date();
+    var theDate = Utilities.formatDate(d, "GMT-5", "MM.dd.yyyy");
+    var extractName = sheetName + ' ' + theDate;
+    blob.setName(sheetName + ' Submission ' + theDate + '.xlsx');
+
+
+    // Add both Excel file to an array (This is not necessary, but not reinventing the wheel here)
+    var attachments = [blob];
+
+    // Send the email with both Excel files as attachments (This piece is location-specific, so make sure to adjust)
+    var contentHTML = "Attached is a receipt of your recent VER submission. Please download and save a copy for your records.";
+   GmailApp.sendEmail(address , extractName, '', {htmlBody: contentHTML, attachments: attachments});
+
+//Identify first empty cell in IDs
+      let ct = 0;
+      while ( IDvalues[ct] && IDvalues[ct][0] != "" ) {
+        ct++;
+        Logger.log(ct);
+        }
+
+// Issue commands to paste values to the VER Entry Tab, and clear the corresponding information from the Input tab      
+       
+      Entry.getRange((ct+1),2,rangefilteredData.length,rangefilteredData[0].length).setValues(rangefilteredData);
+      Entry.getRange((ct+1),1,numcount -1 ,1).setValue(OneEmail);
+      Entry.getRange((ct+1),3,numcount -1 ,1).setValue(DDVERformat);
+      Entry.getRange((ct+1),14,numcount -1 ,1).setValue(now);
+
+   rangeIDsrange.clearContent();
+      
+    // reset the checkmarks and data validation for FSS Actioned? on Entry Tab
+var column = Entry.getRange("q2:q" + lastRow);
+var columnW = Entry.getRange('w2:w' + lastRow); 
+
+  var validateCheckBox = SpreadsheetApp.newDataValidation();
+  validateCheckBox.requireCheckbox();
+  validateCheckBox.setAllowInvalid(false);
+  validateCheckBox.build();
+
+  column.setDataValidation(validateCheckBox)
+  columnW.setDataValidation(validateCheckBox).setValue("FALSE");
+    
+//set columns back to yellow with double borders  
+  rangeIDsrange.setBorder(
+    /*top*/ true,
+    /*left*/ true,
+    /*bottom*/ true,
+    /*right*/ true,
+    /*vertical*/ true,
+    /*horizontal*/ true,
+    /*color*/ 'black',
+    /*style*/ SpreadsheetApp.BorderStyle.DOUBLE
+    
+  );
+  rangeIDsrange.setBackground('#ffff00');
+  return rangeIDsrange;
+
+  }
+  }
+  
+  
+function sendSlackMessage(e) {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let source = ss.getSheetByName("slacksend");
+  let sourcer = ss.getSheetByName("Receipt");
+  var Receipt = sourcer.getRange("a2")// Receipe blank? run query;
+  var PromptSpreadsheetID = source.getRange('G2')
+  Logger.log("failed at email") ;
+  PromptSpreadsheetID.setValue( SpreadsheetApp.getActiveSpreadsheet().getId());
+  if(Receipt.isBlank()) {
+    
+   console.log("Receipt is blank")
+  }
+  else {
+    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    let source = ss.getSheetByName("slacksend");
+    let sourcer = ss.getSheetByName("Receipt");
+    let Dropdown = ss.getSheetByName("Dropdowns");
+    let DDVER = Dropdown.getRange("D2").getValue();
+    let assocount = source.getRange("A2").getValue() ;
+    let email = Session.getEffectiveUser().getEmail() + "\n" // Email of submitter;
+    let verdatetext = "*Date of VER - (date the shift started)*"   // ver date;
+    let verdate = source.getRange("c2").getValue()// ver date;
+    let vertimetext = "*Time of Submission (This is not the time associates were VER'ed)*"
+    let vertime = source.getRange("d2").getValue()  // ver Time;
+    var d = new Date();
+    var currentTime = d.toLocaleTimeString();
+    var addedDate = sourcer.getRange("c2").getValue();
+    //var addedTime = Utilities.formatDate(addedDate, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), "hh:mm a");
+    var curDate = Utilities.formatDate(DDVER,"GMT","MM/dd/yyyy") ;
+    var curTime = vertime
+    //Utilities.formatDate(vertime, "GMT","hh:mm aaa");
+    let location = "*Site Location*" + "\n" + source.getRange("e2").getValue() //Ver location;
+    let linebreak = "\n"
+    let receipt = source.getRange("a2").getValue()// Receipe blank? run query;
+    let spreadsheetPrompt = "*Submitted From ID:* ";
+    let SpreadsheetID =  source.getRange('G2').getValue();
+    let CurSpreadID = source.getRange('G6').getValue();
+    let Resubmit = source.getRange("g3").getValue()  // prompt for if submitted from a copy;
+    const url = "https://hooks.slack.com/services/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";
+    var payload = {
+      text: 
+      "-------------------------------------------------------------------------------------------"+linebreak+
+      "*HF VER Entry submission from* " +  email
+      + linebreak
+      + location + linebreak + linebreak
+      + verdatetext + linebreak + curDate + linebreak + linebreak
+      + vertimetext + linebreak + currentTime + linebreak + linebreak
+      + assocount + linebreak + linebreak
+      + spreadsheetPrompt  + SpreadsheetID + linebreak
+      + Resubmit
+  }
+
+    var headers = {
+      'Content-type': 'application/json'
+    }
+    var options = {
+      headers: headers,
+      method: 'POST',
+      payload: JSON.stringify(payload)
+    }
+
+    UrlFetchApp.fetch(url,options);
+      
+  Browser.msgBox("VER submitted. Please check your email for a copy of your receipt.");
+  }
+
+}
+
+function getId() {
+  Browser.msgBox('Spreadsheet key: ' + SpreadsheetApp.getActiveSpreadsheet().getId());
+}
+
+function master() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let source = ss.getSheetByName("slacksend");
+  let sourcer = ss.getSheetByName("Receipt");
+  sourcer.clear();
+  LoadVERData();
+  Utilities.sleep(2000)// sleep 2 seconds
+  sendSlackMessage();
+
+}
+
+function timetest() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var s = ss.getSheetByName("VER Inputs");
+    var substring1 = s.getRange("F2").getValue();
+  //var addedTime = Utilities.formatDate(, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), "hh:mm a");
+  var currenttime = setTime(new Date());
+  Browser.msgBox(currenttime)
+}
+
