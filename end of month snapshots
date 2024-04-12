@@ -1,0 +1,12 @@
+SELECT *,case 
+    when status = 'Terminated' then datediff(day,hire_date,termination_date) 
+    --when termination_date<hire_date then datediff(day,hire_date,raw_file_date)
+    else datediff(day,hire_date,raw_file_date) end as Tenure
+from US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK
+where 
+raw_file_date IN (
+    SELECT   MAX(raw_file_date)
+    FROM     US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK
+    GROUP BY MONTH(raw_file_date), YEAR(raw_file_date)
+  )
+  order by raw_file_date desc
