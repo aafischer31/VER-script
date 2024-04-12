@@ -1,0 +1,8 @@
+select *,
+    rank() over (partition by associate_id,time_in,pay_code order by report_run_datetime desc) as max_run_date_rank,
+    FILE_TIMESTAMP AS SNOWPIPE_CREATED_AT_UTC,
+    REPORT_RUN_DATETIME AS REPORT_RUN_DATE
+from "US_PEOPLE_INSIGHTS"."LAYER_ANALYTICS"."VIEW_ADP_PUNCH_SOURCE_REPORT_TRAILING_3_DAYS"
+WHERE "TIMECARD_PAY_DATE" > DATEADD(DAY,-7,CURRENT_DATE)
+AND "REPORT_RUN_DATE">DATEADD(DAY,-1, CURRENT_DATE)
+qualify max_run_date_rank=1
