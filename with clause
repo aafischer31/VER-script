@@ -1,0 +1,26 @@
+with A as (select distinct(Employee_id),
+contingent_worker_type,
+Hire_date, 
+Termination_date, 
+datediff(day,hire_date,termination_date)as "Hire_minus_Termination_date",
+CREATED_AT
+
+FROM US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK_PI), --LAYER_ANALYTICS.VIEW_OA_WD_KITCHEN_SINK VIEW_OA_WD_KITCHEN_S)
+
+B as (select distinct(Employee_id),
+contingent_worker_type,
+Hire_date, 
+Termination_date, 
+datediff(day,hire_date,termination_date)as "Hire_minus_Termination_date", 
+CREATED_AT
+
+FROM US_PEOPLE_INSIGHTS.LAYER_ANALYTICS.VIEW_WORKDAY_KITCHEN_SINK_PI), -- LAYER_ANALYTICS.VIEW_OA_WD_KITCHEN_SINK VIEW_OA_WD_KITCHEN_S 
+
+C as (Select distinct a.employee_id, a.hire_date, a.termination_date, datediff(day,a.Hire_date, a.Termination_date) as "Hire_minus_Termination_date",a.CREATED_AT
+      from A inner join B on a.employee_id = b.employee_id
+        where a.hire_date <> b.hire_date 
+        and a.contingent_worker_type is null
+        HAVING abs(datediff(day,a.hire_date,a.termination_date)) < 7
+     order by a.Employee_id, a.hire_date)
+
+Select * from c
